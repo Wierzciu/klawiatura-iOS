@@ -19,8 +19,10 @@ targets:
     settings:
       base:
         PRODUCT_NAME: BarcodeKeyboard
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.BarcodeKeyboard
+        PRODUCT_BUNDLE_IDENTIFIER: pl.twojefirma.klawiatura
         CODE_SIGN_ENTITLEMENTS: App/BarcodeKeyboard.entitlements
+        DEVELOPMENT_TEAM: 55YFRJ3MBY
+        CODE_SIGN_STYLE: Automatic
     dependencies:
       - target: KeyboardExtension
         embed: true
@@ -37,5 +39,25 @@ targets:
     settings:
       base:
         PRODUCT_NAME: KeyboardExtension
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.BarcodeKeyboard.KeyboardExtension
+        PRODUCT_BUNDLE_IDENTIFIER: pl.twojefirma.klawiatura.KeyboardExtension
         CODE_SIGN_ENTITLEMENTS: KeyboardExtension/KeyboardExtension.entitlements
+        DEVELOPMENT_TEAM: 55YFRJ3MBY
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  BarcodeKeyboard:
+    build:
+      targets:
+        BarcodeKeyboard: [run, test, profile, analyze, archive]
+        KeyboardExtension: [run, test, profile, analyze, archive]
+    run:
+      config: Debug
+    test:
+      config: Debug
+    archive:
+      config: Release
+  KeyboardExtension:
+    build:
+      targets:
+        KeyboardExtension: [run, test, profile, analyze, archive]
+    run:
+      config: Debug

@@ -91,3 +91,5 @@ struct ReticleOverlayView: View {
         .allowsHitTesting(false)
     }
 }
+
+// Dodatkowe nakładki dla VisionKit pominięte dla stabilności (systemowe highlighty włączone)

@@ -4,6 +4,17 @@ import AVFoundation
 final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     private let session = AVCaptureSession()
     private let onCandidateChange: (ScannedItem?) -> Void
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    private let highlightLayer: CAShapeLayer = {
+        let layer = CAShapeLayer()
+        layer.fillColor = UIColor.clear.cgColor
+        layer.strokeColor = UIColor.systemGreen.cgColor
+        layer.lineWidth = 4
+        layer.shadowColor = UIColor.systemGreen.cgColor
+        layer.shadowOpacity = 0.8
+        layer.shadowRadius = 8
+        return layer
+    }()
 
     init(onCandidateChange: @escaping (ScannedItem?) -> Void) {
         self.onCandidateChange = onCandidateChange
@@ -28,6 +39,9 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
             reticle.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         reticle.didMove(toParent: self)
+
+        // Highlight layer sits above preview
+        view.layer.addSublayer(highlightLayer)
     }
 
     private func setupCamera() {
@@ -40,18 +54,52 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         output.metadataObjectTypes = [.ean8, .ean13, .qr, .code128, .code39, .code93, .pdf417, .upce, .itf14]
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
-        preview.frame = view.layer.bounds
         view.layer.insertSublayer(preview, at: 0)
+        preview.frame = view.bounds
+        preview.needsDisplayOnBoundsChange = true
+        self.previewLayer = preview
         session.startRunning()
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer?.frame = view.bounds
+        highlightLayer.frame = view.bounds
+    }
+
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        if let first = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
-           let value = first.stringValue {
-            onCandidateChange(ScannedItem(value: value, symbology: first.type.rawValue))
+        if let first = metadataObjects.first as? AVMetadataMachineReadableCodeObject {
+            let value = first.stringValue
+            // Transform to preview coordinates
+            if let previewLayer, let transformed = previewLayer.transformedMetadataObject(for: first) as? AVMetadataMachineReadableCodeObject {
+                let rect = transformed.bounds
+                updateHighlight(rect: rect)
+            } else {
+                updateHighlight(rect: nil)
+            }
+            if let value, !value.isEmpty {
+                onCandidateChange(ScannedItem(value: value, symbology: first.type.rawValue))
+            } else {
+                onCandidateChange(nil)
+            }
         } else {
+            updateHighlight(rect: nil)
             onCandidateChange(nil)
         }
+    }
+
+    private func updateHighlight(rect: CGRect?) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if let rect {
+            let path = UIBezierPath(roundedRect: rect, cornerRadius: 10)
+            highlightLayer.path = path.cgPath
+            highlightLayer.isHidden = false
+        } else {
+            highlightLayer.isHidden = true
+            highlightLayer.path = nil
+        }
+        CATransaction.commit()
     }
 }
 

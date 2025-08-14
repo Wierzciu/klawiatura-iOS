@@ -1,0 +1,58 @@
+{
+  "" : {
+    "diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardExtension-master.dia",
+    "emit-module-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardExtension-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardExtension-master-emit-module.dia",
+    "swift-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardExtension-master.swiftdeps"
+  },
+  "/Users/wierzciu/DEV/klawiatura iOS/KeyboardExtension/KeyboardViewController.swift" : {
+    "const-values" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.swiftconstvalues",
+    "dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.d",
+    "diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.dia",
+    "index-unit-output-path" : "/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.o",
+    "llvm-bc" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.bc",
+    "object" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.o",
+    "swift-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController.swiftdeps",
+    "swiftmodule" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/KeyboardViewController~partial.swiftmodule"
+  },
+  "/Users/wierzciu/DEV/klawiatura iOS/KeyboardExtension/SystemLikeKeyboard.swift" : {
+    "const-values" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.swiftconstvalues",
+    "dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.d",
+    "diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.dia",
+    "index-unit-output-path" : "/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.o",
+    "llvm-bc" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.bc",
+    "object" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.o",
+    "swift-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard.swiftdeps",
+    "swiftmodule" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SystemLikeKeyboard~partial.swiftmodule"
+  },
+  "/Users/wierzciu/DEV/klawiatura iOS/Shared/SharedStorage.swift" : {
+    "const-values" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.swiftconstvalues",
+    "dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.d",
+    "diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.dia",
+    "index-unit-output-path" : "/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.o",
+    "llvm-bc" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.bc",
+    "object" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.o",
+    "swift-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage.swiftdeps",
+    "swiftmodule" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/SharedStorage~partial.swiftmodule"
+  },
+  "/Users/wierzciu/DEV/klawiatura iOS/Shared/TextInsertionFormatter.swift" : {
+    "const-values" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.swiftconstvalues",
+    "dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.d",
+    "diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.dia",
+    "index-unit-output-path" : "/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.o",
+    "llvm-bc" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.bc",
+    "object" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.o",
+    "swift-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter.swiftdeps",
+    "swiftmodule" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/TextInsertionFormatter~partial.swiftmodule"
+  },
+  "/Users/wierzciu/DEV/klawiatura iOS/Shared/URLRoutes.swift" : {
+    "const-values" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.swiftconstvalues",
+    "dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.d",
+    "diagnostics" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.dia",
+    "index-unit-output-path" : "/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.o",
+    "llvm-bc" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.bc",
+    "object" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.o",
+    "swift-dependencies" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes.swiftdeps",
+    "swiftmodule" : "/Users/wierzciu/DEV/klawiatura iOS/build/BarcodeKeyboard.build/Debug-iphoneos/KeyboardExtension.build/Objects-normal/arm64/URLRoutes~partial.swiftmodule"
+  }
+}

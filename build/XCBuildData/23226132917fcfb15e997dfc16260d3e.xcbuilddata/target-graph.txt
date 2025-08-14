@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'BarcodeKeyboard' in project 'BarcodeKeyboard'
+➜ Explicit dependency on target 'KeyboardExtension' in project 'BarcodeKeyboard'
+Target 'KeyboardExtension' in project 'BarcodeKeyboard' (no dependencies)
