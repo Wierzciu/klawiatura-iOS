@@ -1,0 +1,41 @@
+name: BarcodeKeyboard
+options:
+  minimumXcodeGenVersion: 2.38.0
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    IPHONEOS_DEPLOYMENT_TARGET: 18.0
+
+targets:
+  BarcodeKeyboard:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: App
+      - path: Shared
+    info:
+      path: App/Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: BarcodeKeyboard
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.BarcodeKeyboard
+        CODE_SIGN_ENTITLEMENTS: App/BarcodeKeyboard.entitlements
+    dependencies:
+      - target: KeyboardExtension
+        embed: true
+
+  KeyboardExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: KeyboardExtension
+      - path: Shared
+    info:
+      path: KeyboardExtension/Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: KeyboardExtension
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.BarcodeKeyboard.KeyboardExtension
+        CODE_SIGN_ENTITLEMENTS: KeyboardExtension/KeyboardExtension.entitlements
