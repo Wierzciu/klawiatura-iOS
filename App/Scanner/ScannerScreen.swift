@@ -7,6 +7,7 @@ struct ScannerScreen: View {
     @State private var collectedItems: [ScannedItem] = []
     @State private var lastCandidateValue: String? = nil
     @State private var lockedCandidate: ScannedItem? = nil
+    @State private var lastCandidateAt: Date = .distantPast
 
     var body: some View {
         ZStack {
@@ -78,7 +79,11 @@ struct ScannerScreen: View {
                     .font(.system(size: 18, weight: .semibold))
             } else {
                 Spacer()
-                Button(action: { if let c = lockedCandidate { onDone([c]) } }) {
+                Button(action: {
+                    if let c = lockedCandidate {
+                        onDone([c])
+                    }
+                }) {
                     ZStack {
                         Circle().strokeBorder(Color.white.opacity(0.9), lineWidth: 4)
                             .frame(width: 78, height: 78)
@@ -102,15 +107,21 @@ struct ScannerScreen: View {
     private var subtitle: String { mode == .single ? "Nakieruj kod i naciśnij Zapisz" : "Nakieruj, Dodaj kolejne i naciśnij Gotowe" }
 
     private func handleCandidate(_ candidate: ScannedItem?) {
-        guard let item = candidate, !item.value.isEmpty else {
-            lockedCandidate = nil
-            return
+        if let item = candidate, !item.value.isEmpty {
+            // Debounce to avoid excessive state churn
+            if lastCandidateValue != item.value {
+                lastCandidateValue = item.value
+                lockedCandidate = item
+            }
+            lastCandidateAt = Date()
+        } else {
+            // Grace period: keep ostatni kandydat przez chwilę, aby klik w spust zadziałał
+            let elapsed = Date().timeIntervalSince(lastCandidateAt)
+            if elapsed > 0.5 {
+                lockedCandidate = nil
+                lastCandidateValue = nil
+            }
         }
-
-        // Debounce flicker
-        guard lastCandidateValue != item.value else { return }
-        lastCandidateValue = item.value
-        lockedCandidate = item
     }
 
     private func addCandidate(_ item: ScannedItem) {

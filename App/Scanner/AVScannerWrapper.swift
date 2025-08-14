@@ -54,7 +54,7 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         // Using a private serial queue to avoid blocking main and reduce UI jank
         let queue = DispatchQueue(label: "barcode.metadata.queue")
         output.setMetadataObjectsDelegate(self, queue: queue)
-        output.metadataObjectTypes = [.ean8, .ean13, .qr, .code128, .code39, .code93, .pdf417, .upce, .itf14]
+        output.metadataObjectTypes = [.ean8, .ean13, .qr, .code128, .code39, .code93, .pdf417, .upce, .itf14, .interleaved2of5, .aztec, .dataMatrix]
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         view.layer.insertSublayer(preview, at: 0)
