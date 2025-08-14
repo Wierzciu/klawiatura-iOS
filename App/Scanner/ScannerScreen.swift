@@ -12,8 +12,10 @@ struct ScannerScreen: View {
         ZStack {
             scannerView
                 .ignoresSafeArea()
-            ReticleOverlayView(isLockedOn: lockedCandidate != nil)
-                .ignoresSafeArea()
+            if lockedCandidate == nil {
+                ReticleOverlayView(isLockedOn: false)
+                    .ignoresSafeArea()
+            }
         }
         .safeAreaInset(edge: .top) { topBar }
         .safeAreaInset(edge: .bottom) { bottomBar }
@@ -26,13 +28,9 @@ struct ScannerScreen: View {
 
     @ViewBuilder
     private var scannerView: some View {
-        if DataScannerWrapper.isSupported {
-            DataScannerWrapper(onCandidateChange: handleCandidate(_:))
-                .ignoresSafeArea()
-        } else {
-            AVScannerWrapper(onCandidateChange: handleCandidate(_:))
-                .ignoresSafeArea()
-        }
+        // Prefer AVFoundation for performance and custom highlight
+        AVScannerWrapper(onCandidateChange: handleCandidate(_:))
+            .ignoresSafeArea()
     }
 
     @ViewBuilder

@@ -54,7 +54,7 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
 
     private func setupCamera() {
         session.beginConfiguration()
-        session.sessionPreset = .high
+        session.sessionPreset = .hd1280x720
         guard let device = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device) else {
             session.commitConfiguration()
@@ -63,7 +63,9 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         if session.canAddInput(input) { session.addInput(input) }
         let output = AVCaptureMetadataOutput()
         if session.canAddOutput(output) { session.addOutput(output) }
-        output.setMetadataObjectsDelegate(self, queue: .main)
+        // Using a private serial queue to avoid blocking main and reduce UI jank
+        let queue = DispatchQueue(label: "barcode.metadata.queue")
+        output.setMetadataObjectsDelegate(self, queue: queue)
         output.metadataObjectTypes = [.ean8, .ean13, .qr, .code128, .code39, .code93, .pdf417, .upce, .itf14]
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
@@ -100,22 +102,23 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     }
 
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        if let first = metadataObjects.first as? AVMetadataMachineReadableCodeObject {
-            let value = first.stringValue
-            // Transform to preview coordinates
-            if let previewLayer, let transformed = previewLayer.transformedMetadataObject(for: first) as? AVMetadataMachineReadableCodeObject {
-                updateHighlight(transformed: transformed)
-            } else {
-                updateHighlight(transformed: nil)
+        guard let first = metadataObjects.first as? AVMetadataMachineReadableCodeObject else {
+            DispatchQueue.main.async { [weak self] in
+                self?.updateHighlight(transformed: nil)
+                self?.onCandidateChange(nil)
             }
-            if let value, !value.isEmpty {
-                onCandidateChange(ScannedItem(value: value, symbology: first.type.rawValue))
+            return
+        }
+
+        let value = first.stringValue
+        let transformed = previewLayer?.transformedMetadataObject(for: first) as? AVMetadataMachineReadableCodeObject
+        DispatchQueue.main.async { [weak self] in
+            self?.updateHighlight(transformed: transformed)
+            if let v = value, !v.isEmpty {
+                self?.onCandidateChange(ScannedItem(value: v, symbology: first.type.rawValue))
             } else {
-                onCandidateChange(nil)
+                self?.onCandidateChange(nil)
             }
-        } else {
-            updateHighlight(transformed: nil)
-            onCandidateChange(nil)
         }
     }
 
