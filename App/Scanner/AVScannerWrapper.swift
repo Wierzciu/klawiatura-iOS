@@ -34,18 +34,6 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         super.viewDidLoad()
         view.backgroundColor = .black
         setupCamera()
-        let reticle = UIHostingController(rootView: ReticleOverlayView(isLockedOn: false))
-        addChild(reticle)
-        reticle.view.backgroundColor = .clear
-        reticle.view.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(reticle.view)
-        NSLayoutConstraint.activate([
-            reticle.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            reticle.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            reticle.view.topAnchor.constraint(equalTo: view.topAnchor),
-            reticle.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        reticle.didMove(toParent: self)
 
         // Dimming + highlight layers sit above preview
         view.layer.addSublayer(dimmingLayer)
@@ -55,7 +43,7 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private func setupCamera() {
         session.beginConfiguration()
         session.sessionPreset = .hd1280x720
-        guard let device = AVCaptureDevice.default(for: .video),
+        guard let device = selectBestBackCamera(),
               let input = try? AVCaptureDeviceInput(device: device) else {
             session.commitConfiguration()
             return
@@ -85,6 +73,10 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
             if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
             if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
             device.isSubjectAreaChangeMonitoringEnabled = true
+            // Enable auto video stabilization and auto HDR when available (improves readability)
+            if let connection = (view.layer as? AVCaptureVideoPreviewLayer)?.connection, connection.isVideoStabilizationSupported {
+                connection.preferredVideoStabilizationMode = .auto
+            }
             device.unlockForConfiguration()
         } catch {}
 
@@ -93,6 +85,26 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         view.addGestureRecognizer(tap)
         session.commitConfiguration()
         session.startRunning()
+    }
+
+    // Prefer multi-camera devices that can switch optics automatically
+    private func selectBestBackCamera() -> AVCaptureDevice? {
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [
+            .builtInTripleCamera,
+            .builtInDualWideCamera,
+            .builtInDualCamera,
+            .builtInWideAngleCamera,
+            .builtInUltraWideCamera,
+            .builtInTelephotoCamera
+        ]
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
+            mediaType: .video,
+            position: .back
+        )
+        // Pick first available by priority list above
+        if let chosen = discovery.devices.first { return chosen }
+        return AVCaptureDevice.default(for: .video)
     }
 
     override func viewDidLayoutSubviews() {
