@@ -7,12 +7,19 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private let highlightLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
-        layer.fillColor = UIColor.clear.cgColor
+        layer.fillColor = UIColor.systemGreen.withAlphaComponent(0.25).cgColor
         layer.strokeColor = UIColor.systemGreen.cgColor
         layer.lineWidth = 4
         layer.shadowColor = UIColor.systemGreen.cgColor
         layer.shadowOpacity = 0.8
         layer.shadowRadius = 8
+        return layer
+    }()
+    private let dimmingLayer: CAShapeLayer = {
+        let layer = CAShapeLayer()
+        layer.fillColor = UIColor.black.withAlphaComponent(0.35).cgColor
+        layer.fillRule = .evenOdd
+        layer.shadowOpacity = 0
         return layer
     }()
 
@@ -40,13 +47,19 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         ])
         reticle.didMove(toParent: self)
 
-        // Highlight layer sits above preview
+        // Dimming + highlight layers sit above preview
+        view.layer.addSublayer(dimmingLayer)
         view.layer.addSublayer(highlightLayer)
     }
 
     private func setupCamera() {
+        session.beginConfiguration()
+        session.sessionPreset = .high
         guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device) else { return }
+              let input = try? AVCaptureDeviceInput(device: device) else {
+            session.commitConfiguration()
+            return
+        }
         if session.canAddInput(input) { session.addInput(input) }
         let output = AVCaptureMetadataOutput()
         if session.canAddOutput(output) { session.addOutput(output) }
@@ -58,6 +71,25 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         preview.frame = view.bounds
         preview.needsDisplayOnBoundsChange = true
         self.previewLayer = preview
+
+        // Prefer fast continuous autofocus towards near range for barcodes
+        do {
+            try device.lockForConfiguration()
+            if device.isFocusPointOfInterestSupported { device.focusPointOfInterest = CGPoint(x: 0.5, y: 0.5) }
+            if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+            if device.isAutoFocusRangeRestrictionSupported { device.autoFocusRangeRestriction = .near }
+            if device.isSmoothAutoFocusSupported { device.isSmoothAutoFocusEnabled = true }
+            if device.isExposurePointOfInterestSupported { device.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5) }
+            if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+            if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
+            device.isSubjectAreaChangeMonitoringEnabled = true
+            device.unlockForConfiguration()
+        } catch {}
+
+        // Tap to focus
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        view.addGestureRecognizer(tap)
+        session.commitConfiguration()
         session.startRunning()
     }
 
@@ -72,10 +104,9 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
             let value = first.stringValue
             // Transform to preview coordinates
             if let previewLayer, let transformed = previewLayer.transformedMetadataObject(for: first) as? AVMetadataMachineReadableCodeObject {
-                let rect = transformed.bounds
-                updateHighlight(rect: rect)
+                updateHighlight(transformed: transformed)
             } else {
-                updateHighlight(rect: nil)
+                updateHighlight(transformed: nil)
             }
             if let value, !value.isEmpty {
                 onCandidateChange(ScannedItem(value: value, symbology: first.type.rawValue))
@@ -83,23 +114,56 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
                 onCandidateChange(nil)
             }
         } else {
-            updateHighlight(rect: nil)
+            updateHighlight(transformed: nil)
             onCandidateChange(nil)
         }
     }
 
-    private func updateHighlight(rect: CGRect?) {
+    private func updateHighlight(transformed: AVMetadataMachineReadableCodeObject?) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        if let rect {
-            let path = UIBezierPath(roundedRect: rect, cornerRadius: 10)
-            highlightLayer.path = path.cgPath
+        if let transformed {
+            // Build polygon from corners if available, otherwise use bounds
+            let polygonPath: UIBezierPath
+            let corners = transformed.corners
+            if corners.count >= 4 {
+                let path = UIBezierPath()
+                path.move(to: corners[0])
+                for i in 1..<corners.count { path.addLine(to: corners[i]) }
+                path.close()
+                polygonPath = path
+            } else {
+                polygonPath = UIBezierPath(roundedRect: transformed.bounds, cornerRadius: 8)
+            }
+            // Highlight path
+            highlightLayer.path = polygonPath.cgPath
             highlightLayer.isHidden = false
+            // Dimming outside area using even-odd fill
+            let full = UIBezierPath(rect: view.bounds)
+            full.append(polygonPath)
+            dimmingLayer.path = full.cgPath
+            dimmingLayer.isHidden = false
         } else {
             highlightLayer.isHidden = true
             highlightLayer.path = nil
+            dimmingLayer.isHidden = true
+            dimmingLayer.path = nil
         }
         CATransaction.commit()
+    }
+
+    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        guard let previewLayer, let device = (session.inputs.compactMap { $0 as? AVCaptureDeviceInput }.first)?.device else { return }
+        let point = gesture.location(in: view)
+        let devicePoint = previewLayer.captureDevicePointConverted(fromLayerPoint: point)
+        do {
+            try device.lockForConfiguration()
+            if device.isFocusPointOfInterestSupported { device.focusPointOfInterest = devicePoint }
+            if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
+            if device.isExposurePointOfInterestSupported { device.exposurePointOfInterest = devicePoint }
+            if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+            device.unlockForConfiguration()
+        } catch {}
     }
 }
 
