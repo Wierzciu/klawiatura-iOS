@@ -114,22 +114,38 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     }
 
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        guard let first = metadataObjects.first as? AVMetadataMachineReadableCodeObject else {
+        // Wybierz obiekt, którego bounds zawiera punkt celowania (środek ekranu)
+        guard let previewLayer else {
             DispatchQueue.main.async { [weak self] in
                 self?.updateHighlight(transformed: nil)
                 self?.onCandidateChange(nil)
             }
             return
         }
-
-        let value = first.stringValue
-        let transformed = previewLayer?.transformedMetadataObject(for: first) as? AVMetadataMachineReadableCodeObject
-        DispatchQueue.main.async { [weak self] in
-            self?.updateHighlight(transformed: transformed)
-            if let v = value, !v.isEmpty {
-                self?.onCandidateChange(ScannedItem(value: v, symbology: first.type.rawValue))
-            } else {
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        let candidates = metadataObjects.compactMap { $0 as? AVMetadataMachineReadableCodeObject }
+        let chosenOriginal: AVMetadataMachineReadableCodeObject? = candidates.first { obj in
+            if let t = previewLayer.transformedMetadataObject(for: obj) as? AVMetadataMachineReadableCodeObject {
+                return t.bounds.insetBy(dx: -12, dy: -12).contains(center)
+            }
+            return false
+        }
+        guard let original = chosenOriginal else {
+            DispatchQueue.main.async { [weak self] in
+                self?.updateHighlight(transformed: nil)
                 self?.onCandidateChange(nil)
+            }
+            return
+        }
+        let value = original.stringValue
+        let transformed = previewLayer.transformedMetadataObject(for: original) as? AVMetadataMachineReadableCodeObject
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.updateHighlight(transformed: transformed)
+            if let v = value, !v.isEmpty {
+                self.onCandidateChange(ScannedItem(value: v, symbology: original.type.rawValue))
+            } else {
+                self.onCandidateChange(nil)
             }
         }
     }

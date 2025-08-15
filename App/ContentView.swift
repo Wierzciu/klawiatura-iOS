@@ -7,21 +7,12 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
-                HStack {
-                    Button {
-                        showScanner = .single
-                    } label: {
-                        Label("Skanuj 1", systemImage: "barcode.viewfinder")
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button {
-                        showScanner = .multi
-                    } label: {
-                        Label("Skanuj wiele", systemImage: "square.stack.3d.up")
-                    }
-                    .buttonStyle(.bordered)
+                Button {
+                    showScanner = SharedStorage.getLastMode() ?? .single
+                } label: {
+                    Label("Skanuj", systemImage: "barcode.viewfinder")
                 }
+                .buttonStyle(.borderedProminent)
 
                 if !lastSaved.isEmpty {
                     List(lastSaved, id: \.date) { item in

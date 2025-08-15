@@ -70,15 +70,14 @@ struct KeyboardRootView: View {
     var body: some View {
         // Scan bar
         HStack(spacing: 12) {
-            Button(action: startSingle) {
-                Label("Skan 1", systemImage: "barcode.viewfinder")
+            Button(action: {
+                let mode = SharedStorage.getLastMode() ?? .single
+                SharedStorage.set(lastMode: mode)
+                if mode == .multi { startMulti() } else { startSingle() }
+            }) {
+                Label("Skanuj", systemImage: "barcode.viewfinder")
             }
             .buttonStyle(.borderedProminent)
-
-            Button(action: startMulti) {
-                Label("Skan wiele", systemImage: "square.stack.3d.up")
-            }
-            .buttonStyle(.bordered)
 
             Spacer()
 

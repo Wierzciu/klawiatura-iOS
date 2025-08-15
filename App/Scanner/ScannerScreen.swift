@@ -8,15 +8,16 @@ struct ScannerScreen: View {
     @State private var lastCandidateValue: String? = nil
     @State private var lockedCandidate: ScannedItem? = nil
     @State private var lastCandidateAt: Date = .distantPast
+    @State private var currentMode: ScanMode = .single
 
     var body: some View {
         ZStack {
             scannerView
                 .ignoresSafeArea()
-            if lockedCandidate == nil {
-                ReticleOverlayView(isLockedOn: false)
-                    .ignoresSafeArea()
-            }
+            AimDot()
+                .frame(width: 10, height: 10)
+                .foregroundStyle(.white)
+                .opacity(0.9)
         }
         .safeAreaInset(edge: .top) { topBar }
         .safeAreaInset(edge: .bottom) { bottomBar }
@@ -24,6 +25,7 @@ struct ScannerScreen: View {
         .onAppear {
             collectedItems.removeAll()
             lastCandidateValue = nil
+            currentMode = mode
         }
     }
 
@@ -46,7 +48,7 @@ struct ScannerScreen: View {
                     .foregroundStyle(.white.opacity(0.8))
             }
             Spacer()
-            if mode == .multi {
+            if currentMode == .multi {
                 Label("\(collectedItems.count)", systemImage: "tray.full")
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10)
@@ -64,47 +66,81 @@ struct ScannerScreen: View {
 
     @ViewBuilder
     private var bottomBar: some View {
-        HStack {
-            if mode == .multi {
-                Button(action: { if let c = lockedCandidate { addCandidate(c) } }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 34, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: Circle())
+        HStack(spacing: 14) {
+            // Lewy: przełącz na single
+            Button(action: {
+                currentMode = .single
+                SharedStorage.set(lastMode: .single)
+            }) {
+                Label("single", systemImage: "barcode.viewfinder")
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(currentMode == .single ? .ultraThinMaterial : .thinMaterial, in: Capsule())
+            }
+
+            Spacer()
+
+            // Środkowy: spust
+            Button(action: {
+                if currentMode == .multi {
+                    if let c = lockedCandidate { addCandidate(c) }
+                } else if let c = lockedCandidate {
+                    onDone([c])
                 }
-                Spacer()
-                Button("Gotowe") { onDone(collectedItems) }
-                    .buttonStyle(.borderedProminent)
-                    .font(.system(size: 18, weight: .semibold))
-            } else {
-                Spacer()
+            }) {
+                ZStack {
+                    Circle().strokeBorder(Color.white.opacity(0.9), lineWidth: 4)
+                        .frame(width: 72, height: 72)
+                    Circle().fill(lockedCandidate == nil ? Color.white.opacity(0.3) : Color.white)
+                        .frame(width: 58, height: 58)
+                }
+            }
+            .disabled(lockedCandidate == nil)
+
+            Spacer()
+
+            // Prawy: przełącz na multi + licznik nad
+            VStack(spacing: 6) {
+                if currentMode == .multi, collectedItems.count > 0 {
+                    Text("\(collectedItems.count)")
+                        .font(.caption2)
+                        .padding(5)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
                 Button(action: {
-                    if let c = lockedCandidate {
-                        onDone([c])
-                    }
+                    currentMode = .multi
+                    SharedStorage.set(lastMode: .multi)
                 }) {
-                    ZStack {
-                        Circle().strokeBorder(Color.white.opacity(0.9), lineWidth: 4)
-                            .frame(width: 78, height: 78)
-                        Circle().fill(lockedCandidate == nil ? Color.white.opacity(0.3) : Color.white)
-                            .frame(width: 64, height: 64)
-                    }
+                    Label("multi", systemImage: "square.stack.3d.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(currentMode == .multi ? .ultraThinMaterial : .thinMaterial, in: Capsule())
                 }
-                .disabled(lockedCandidate == nil)
-                Spacer()
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(
             LinearGradient(colors: [Color.black.opacity(0.0), Color.black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea(edges: .bottom)
         )
+        // Przycisk "Zakończ" nad spustem – tylko w multi po pierwszym dodaniu
+        .overlay(alignment: .top) {
+            if currentMode == .multi && collectedItems.count > 0 {
+                Button("Zakończ") { onDone(collectedItems) }
+                    .buttonStyle(.borderedProminent)
+                    .font(.system(size: 16, weight: .semibold))
+                    .padding(.top, -6)
+            }
+        }
     }
 
-    private var title: String { mode == .single ? "Skan – pojedynczy" : "Skan – wiele" }
-    private var subtitle: String { mode == .single ? "Nakieruj kod i naciśnij Zapisz" : "Nakieruj, Dodaj kolejne i naciśnij Gotowe" }
+    private var title: String { currentMode == .single ? "Skan – pojedynczy" : "Skan – wiele" }
+    private var subtitle: String { currentMode == .single ? "Nakieruj kod i naciśnij Zapisz" : "Nakieruj, Dodaj kolejne i naciśnij Zakończ" }
 
     private func handleCandidate(_ candidate: ScannedItem?) {
         if let item = candidate, !item.value.isEmpty {
@@ -135,4 +171,10 @@ struct ScannerScreen: View {
     ScannerScreen(mode: .single) { _ in }
 }
 
-
+struct AimDot: View {
+    var body: some View {
+        Circle()
+            .fill(Color.white.opacity(0.9))
+            .shadow(color: .black.opacity(0.6), radius: 1)
+    }
+}
