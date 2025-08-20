@@ -12,6 +12,7 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let root = KeyboardRootView(
+            isFullAccess: self.hasFullAccess,
             startSingle: { [weak self] in self?.openScanner(mode: .single) },
             startMulti: { [weak self] in self?.openScanner(mode: .multi) },
             insertPending: { [weak self] in self?.insertPendingIfAny() },
@@ -47,16 +48,67 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     func openScanner(mode: ScanMode) {
-        guard let url = URLRoutes.scanURL(mode: mode) else { return }
-        if #available(iOSApplicationExtension 13.0, *) {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            self.extensionContext?.open(url, completionHandler: { _ in })
+        print("🔍 KeyboardViewController: openScanner called with mode: \(mode)")
+        print("ℹ️ KeyboardViewController: hasFullAccess = \(hasFullAccess)")
+        
+        // Check if we have full access
+        guard hasFullAccess else {
+            print("❌ KeyboardViewController: No full access - cannot open URLs")
+            showFullAccessAlert()
+            return
         }
+        
+        guard let url = URLRoutes.scanURL(mode: mode) else {
+            print("❌ KeyboardViewController: Failed to create URL")
+            return
+        }
+        
+        print("🔗 KeyboardViewController: Generated URL: \(url)")
+        
+        guard let extensionContext = self.extensionContext else {
+            print("❌ KeyboardViewController: extensionContext is nil")
+            return
+        }
+        
+        DispatchQueue.main.async {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.prepare()
+            generator.impactOccurred()
+            
+            print("📱 KeyboardViewController: Calling extensionContext.open with URL: \(url.absoluteString)")
+            extensionContext.open(url) { [weak self] success in
+                print("✅ KeyboardViewController: extensionContext.open completed with success: \(success)")
+                if !success {
+                    print("⚠️ KeyboardViewController: Failed to open URL. Ensure Full Access is enabled and the host app is installed with the 'barcodekb' URL scheme.")
+                    self?.showOpenFailedAlert()
+                }
+            }
+        }
+    }
+    
+    private func showFullAccessAlert() {
+        let alert = UIAlertController(
+            title: "Wymagany pełny dostęp",
+            message: "Aby używać funkcji skanowania, włącz 'Pełny dostęp' dla tej klawiatury w Ustawieniach > Ogólne > Klawiatura > Klawiatury.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func showOpenFailedAlert() {
+        let alert = UIAlertController(
+            title: "Nie udało się otworzyć aplikacji",
+            message: "Sprawdź, czy aplikacja jest zainstalowana i czy ma zdefiniowany schemat URL 'barcodekb'. Następnie spróbuj ponownie.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }
 
 struct KeyboardRootView: View {
+    let isFullAccess: Bool
     let startSingle: () -> Void
     let startMulti: () -> Void
     let insertPending: () -> Void
@@ -68,16 +120,37 @@ struct KeyboardRootView: View {
     @State private var lastCount: Int = 0
 
     var body: some View {
+        if !isFullAccess {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                Text("Włącz 'Pełny dostęp' w Ustawieniach, aby uruchomić skanowanie.")
+            }
+            .font(.footnote)
+            .foregroundColor(.white)
+            .padding(8)
+            .frame(maxWidth: .infinity)
+            .background(Color.orange)
+            .cornerRadius(8)
+            .padding([.horizontal, .top], 8)
+        }
         // Scan bar
         HStack(spacing: 12) {
-            Button(action: {
-                let mode = SharedStorage.getLastMode() ?? .single
-                SharedStorage.set(lastMode: mode)
-                if mode == .multi { startMulti() } else { startSingle() }
-            }) {
-                Label("Skanuj", systemImage: "barcode.viewfinder")
-            }
-            .buttonStyle(.borderedProminent)
+            
+if let url = URLRoutes.scanURL(mode: SharedStorage.getLastMode() ?? .single) {
+    Link(destination: url) {
+        Label("Skanuj", systemImage: "barcode.viewfinder")
+    }
+    .simultaneousGesture(TapGesture().onEnded {
+        let mode = SharedStorage.getLastMode() ?? .single
+        SharedStorage.set(lastMode: mode)
+    })
+    .buttonStyle(.borderedProminent)
+} else {
+    Button(action: { /* fallback */ }) {
+        Label("Skanuj", systemImage: "barcode.viewfinder")
+    }.buttonStyle(.borderedProminent)
+}
+
 
             Spacer()
 

@@ -16,6 +16,14 @@ targets:
       - path: Shared
     info:
       path: App/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: BarcodeKeyboard URL Scheme
+            CFBundleURLSchemes:
+              - barcodekb
+        NSCameraUsageDescription: Potrzebujemy dostępu do aparatu, aby skanować kody kreskowe.
+    entitlements:
+      path: App/BarcodeKeyboard.entitlements
     settings:
       base:
         PRODUCT_NAME: BarcodeKeyboard
@@ -36,6 +44,18 @@ targets:
       - path: Shared
     info:
       path: KeyboardExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Klawiatura Kodów
+        NSExtension:
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: pl-PL
+            RequestsOpenAccess: true
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+    entitlements:
+      path: KeyboardExtension/KeyboardExtension.entitlements
     settings:
       base:
         PRODUCT_NAME: KeyboardExtension

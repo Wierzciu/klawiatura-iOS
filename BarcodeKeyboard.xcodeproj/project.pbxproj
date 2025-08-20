@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -59,7 +59,7 @@
 		3B4D098B943A9B41F47BAF4F /* SharedStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStorage.swift; sourceTree = "<group>"; };
 		7332A72AF8BA81CB69B02DAC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		81DFB77932922D9E4CA4939A /* ScannerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerScreen.swift; sourceTree = "<group>"; };
-		81FDA0C725EED9FC416EB77C /* KeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		81FDA0C725EED9FC416EB77C /* KeyboardExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		99D0791486E07EE80FFB6213 /* URLRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLRoutes.swift; sourceTree = "<group>"; };
 		AD61044CDC70254AEC8CAAEB /* BarcodeKeyboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeKeyboardApp.swift; sourceTree = "<group>"; };
 		AF18C8D53523F74E39FD4C4B /* KeyboardExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KeyboardExtension.entitlements; sourceTree = "<group>"; };
@@ -186,6 +186,7 @@
 						ProvisioningStyle = Automatic;
 					};
 					DDD31230FBC22AED8BDDEEC1 = {
+						DevelopmentTeam = 55YFRJ3MBY;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -200,6 +201,7 @@
 			);
 			mainGroup = 19082302CD40D30F8B920178;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
