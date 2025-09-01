@@ -22,6 +22,11 @@ final class KeyboardViewController: UIInputViewController {
             insertNewline: { [weak self] in self?.textDocumentProxy.insertText("\n") }
         )
         let host = UIHostingController(rootView: root)
+        if #available(iOS 16.0, *) {
+            host.sizingOptions = .intrinsicContentSize
+        }
+        host.view.backgroundColor = .clear
+        host.view.isOpaque = false
         host.view.translatesAutoresizingMaskIntoConstraints = false
         addChild(host)
         view.addSubview(host.view)
@@ -120,21 +125,22 @@ struct KeyboardRootView: View {
     @State private var lastCount: Int = 0
 
     var body: some View {
-        if !isFullAccess {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                Text("Włącz 'Pełny dostęp' w Ustawieniach, aby uruchomić skanowanie.")
+        VStack(spacing: 6) {
+            if !isFullAccess {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text("Włącz 'Pełny dostęp' w Ustawieniach, aby uruchomić skanowanie.")
+                }
+                .font(.footnote)
+                .foregroundColor(.white)
+                .padding(8)
+                .frame(maxWidth: .infinity)
+                .background(Color.orange)
+                .cornerRadius(8)
+                .padding(.horizontal, 8)
             }
-            .font(.footnote)
-            .foregroundColor(.white)
-            .padding(8)
-            .frame(maxWidth: .infinity)
-            .background(Color.orange)
-            .cornerRadius(8)
-            .padding([.horizontal, .top], 8)
-        }
-        // Scan bar
-        HStack(spacing: 12) {
+            // Scan bar (compact)
+            HStack(spacing: 12) {
             
 if let url = URLRoutes.scanURL(mode: SharedStorage.getLastMode() ?? .single) {
     Link(destination: url) {
@@ -145,10 +151,15 @@ if let url = URLRoutes.scanURL(mode: SharedStorage.getLastMode() ?? .single) {
         SharedStorage.set(lastMode: mode)
     })
     .buttonStyle(.borderedProminent)
+    .controlSize(.small)
+    .font(.callout)
 } else {
     Button(action: { /* fallback */ }) {
         Label("Skanuj", systemImage: "barcode.viewfinder")
-    }.buttonStyle(.borderedProminent)
+    }
+    .buttonStyle(.borderedProminent)
+    .controlSize(.small)
+    .font(.callout)
 }
 
 
@@ -168,17 +179,19 @@ if let url = URLRoutes.scanURL(mode: SharedStorage.getLastMode() ?? .single) {
                 Image(systemName: "globe")
             }
             .buttonStyle(.plain)
-        }
-        .padding(8)
-        .onAppear { lastCount = SharedStorage.loadPending().count }
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 36)
+            .onAppear { lastCount = SharedStorage.loadPending().count }
 
-        // System-like keyboard body
-        SystemLikeKeyboardView(
-            insertText: insertText,
-            deleteBackward: deleteBackward,
-            advanceToNext: nextKeyboard,
-            insertNewline: insertNewline
-        )
-        .padding(.horizontal, 6)
+            // System-like keyboard body
+            SystemLikeKeyboardView(
+                insertText: insertText,
+                deleteBackward: deleteBackward,
+                advanceToNext: nextKeyboard,
+                insertNewline: insertNewline
+            )
+            .padding(.horizontal, 6)
+        }
     }
 }
