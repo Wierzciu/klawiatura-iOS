@@ -11,6 +11,7 @@
 		131E626A6F7C6E8357158D97 /* BarcodeKeyboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD61044CDC70254AEC8CAAEB /* BarcodeKeyboardApp.swift */; };
 		1A851CF915B4DDE1BEB4EC38 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1315F5311F87B44264ADF41D /* ContentView.swift */; };
 		2F861EBC623A272CA99BF920 /* SharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B4D098B943A9B41F47BAF4F /* SharedStorage.swift */; };
+		3764D5A2F8B4FA7A72C417A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 51074105A385372BC7AD7D43 /* Assets.xcassets */; };
 		66C3BBBDE482EA0F868CF0E1 /* URLRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D0791486E07EE80FFB6213 /* URLRoutes.swift */; };
 		6C50AA1B4DDE648F4F66B6DA /* SharedStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B4D098B943A9B41F47BAF4F /* SharedStorage.swift */; };
 		76A5D106848B5EF7684DC73C /* URLRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D0791486E07EE80FFB6213 /* URLRoutes.swift */; };
@@ -57,6 +58,7 @@
 		1722539787FD83494264640B /* AVScannerWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVScannerWrapper.swift; sourceTree = "<group>"; };
 		3AF3A15EF6C264FF19D820D8 /* TextInsertionFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInsertionFormatter.swift; sourceTree = "<group>"; };
 		3B4D098B943A9B41F47BAF4F /* SharedStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStorage.swift; sourceTree = "<group>"; };
+		51074105A385372BC7AD7D43 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7332A72AF8BA81CB69B02DAC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		81DFB77932922D9E4CA4939A /* ScannerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerScreen.swift; sourceTree = "<group>"; };
 		81FDA0C725EED9FC416EB77C /* KeyboardExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -101,6 +103,7 @@
 		9CA06A67F5157C9BEEABAE35 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				51074105A385372BC7AD7D43 /* Assets.xcassets */,
 				04C8899AE23953A1D137C68A /* BarcodeKeyboard.entitlements */,
 				AD61044CDC70254AEC8CAAEB /* BarcodeKeyboardApp.swift */,
 				1315F5311F87B44264ADF41D /* ContentView.swift */,
@@ -216,6 +219,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3764D5A2F8B4FA7A72C417A9 /* Assets.xcassets in Resources */,
 				81D8B753CBC6F536C9E02B77 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -265,6 +269,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = App/BarcodeKeyboard.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -405,6 +410,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = App/BarcodeKeyboard.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
