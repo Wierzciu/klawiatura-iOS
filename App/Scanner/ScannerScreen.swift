@@ -21,8 +21,14 @@ struct ScannerScreen: View {
                 .opacity(0.95)
                 .allowsHitTesting(false)
         }
-        .safeAreaInset(edge: .top) { topBar }
-        .safeAreaInset(edge: .bottom) { bottomBar }
+        .overlay(alignment: .top) {
+            topBar
+                .padding(.top, 24) // odsuń treść od wycięcia/Dynamic Island
+        }
+        .overlay(alignment: .bottom) {
+            bottomBar
+                .padding(.bottom, 56) // podnieś spust i przełącznik trybu wyżej
+        }
         .background(Color.black.ignoresSafeArea())
         .onAppear {
             collectedItems.removeAll()
@@ -89,6 +95,8 @@ struct ScannerScreen: View {
                 if currentMode == .multi {
                     if let c = lockedCandidate { addCandidate(c) }
                 } else if let c = lockedCandidate {
+                    // Zapisz natychmiast do pending, żeby nie stracić skanu
+                    SharedStorage.appendPending(c)
                     onDone([c])
                 }
             }) {
@@ -136,7 +144,7 @@ struct ScannerScreen: View {
                 Button("Zakończ") { onDone(collectedItems) }
                     .buttonStyle(.borderedProminent)
                     .font(.system(size: 16, weight: .semibold))
-                    .padding(.top, -6)
+                    .padding(.top, -32)
             }
         }
     }
@@ -165,6 +173,8 @@ struct ScannerScreen: View {
     private func addCandidate(_ item: ScannedItem) {
         if !collectedItems.contains(where: { $0.value == item.value }) {
             collectedItems.append(item)
+            // Zapisuj na bieżąco w App Group (odporne na przerwanie procesu)
+            SharedStorage.appendPending(item)
         }
     }
 }

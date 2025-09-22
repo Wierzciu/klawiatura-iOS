@@ -17,10 +17,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct BarcodeKeyboardApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @State private var presentedMode: ScanMode? = nil
     private let persistenceController = PersistenceController.shared
     private let scanService = ScanPersistenceService.shared
     private let defaultListId = ScanPersistenceService.defaultListId
+
+    @MainActor private func flushPendingIfAny() {
+        let items = SharedStorage.fetchAndClear()
+        guard !items.isEmpty else { return }
+        let target = SharedStorage.getLastListId() ?? defaultListId
+        _ = scanService.save(scannedItems: items, listId: target)
+    }
 
     @MainActor private func handle(_ url: URL) {
         print("🔗 BarcodeKeyboardApp: Handling URL: \(url)")
@@ -37,8 +45,14 @@ struct BarcodeKeyboardApp: App {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .onOpenURL(perform: handle)
-                .onAppear {
+.onAppear {
                     appDelegate.onDeepLink = { url in handle(url) }
+                    flushPendingIfAny()
+                }
+                .onChange(of: scenePhase) { newPhase in
+                    if newPhase == .active {
+                        flushPendingIfAny()
+                    }
                 }
                 .sheet(item: $presentedMode) { mode in
                     ScannerScreen(mode: mode) { items in

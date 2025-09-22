@@ -46,7 +46,11 @@ struct ScanListView: View {
         )) {
             Alert(title: Text("Błąd"), message: Text(viewModel.errorMessage ?? "Nieznany błąd"), dismissButton: .default(Text("OK")))
         }
-        .onAppear(perform: viewModel.loadItems)
+.onAppear(perform: viewModel.loadItems)
+        .onAppear {
+            // Zapamiętaj aktywną listę do autosave'u pendingowych skanów
+            SharedStorage.set(lastListId: viewModel.listId)
+        }
     }
 
     private var header: some View {

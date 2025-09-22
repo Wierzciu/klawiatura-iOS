@@ -7,7 +7,7 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var metadataOutput: AVCaptureMetadataOutput?
     private var lastProcessTs: CFTimeInterval = 0
-    private let processInterval: CFTimeInterval = 0.08 // seconds
+    private let processInterval: CFTimeInterval = 0.05 // seconds
     private let highlightLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
         layer.fillColor = UIColor.systemGreen.withAlphaComponent(0.25).cgColor
@@ -45,8 +45,14 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
 
 private func setupCamera() {
         session.beginConfiguration()
-        // Lower resolution preset for better latency
-        session.sessionPreset = .vga640x480
+        // Pełne HD dla lepszego odczytu 1D (EAN/Code128) z bezpiecznym fallbackiem
+        if session.canSetSessionPreset(.hd1920x1080) {
+            session.sessionPreset = .hd1920x1080
+        } else if session.canSetSessionPreset(.hd1280x720) {
+            session.sessionPreset = .hd1280x720
+        } else {
+            session.sessionPreset = .high
+        }
         guard let device = selectBestBackCamera(),
               let input = try? AVCaptureDeviceInput(device: device) else {
             session.commitConfiguration()
@@ -59,8 +65,8 @@ private func setupCamera() {
         // Using a private serial queue to avoid blocking main and reduce UI jank
         let queue = DispatchQueue(label: "barcode.metadata.queue")
         output.setMetadataObjectsDelegate(self, queue: queue)
-        // Limit types for performance; expand if you need more symbologies
-        output.metadataObjectTypes = [.ean8, .ean13, .code128]
+        // Zakres typów zoptymalizowany pod 1D; rozszerz w razie potrzeby
+        output.metadataObjectTypes = [.ean8, .ean13, .upce, .code128, .code39, .itf14, .interleaved2of5]
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         view.layer.insertSublayer(preview, at: 0)
@@ -79,9 +85,14 @@ private func setupCamera() {
             if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
             if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
             device.isSubjectAreaChangeMonitoringEnabled = true
-            // Enable auto video stabilization and auto HDR when available (improves readability)
-            if let connection = (view.layer as? AVCaptureVideoPreviewLayer)?.connection, connection.isVideoStabilizationSupported {
-                connection.preferredVideoStabilizationMode = .auto
+            // Enable auto video stabilization and force portrait orientation
+            if let connection = preview.connection {
+                if connection.isVideoStabilizationSupported {
+                    connection.preferredVideoStabilizationMode = .auto
+                }
+                if connection.isVideoOrientationSupported {
+                    connection.videoOrientation = .portrait
+                }
             }
             device.unlockForConfiguration()
         } catch {}
@@ -148,13 +159,18 @@ func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects
             // Środek ekranu = pozycja kropki
             let center = CGPoint(x: self.view.bounds.midX, y: self.view.bounds.midY)
 
-            // Kandydaci po transformacji do warstwy; wybierz tylko te, których ramka zawiera środek
-            let transformedCandidates: [(orig: AVMetadataMachineReadableCodeObject, transformed: AVMetadataMachineReadableCodeObject)] = objects.compactMap { obj in
+            // Kandydaci po transformacji; wybierz tych, których ramka zawiera środek (z tolerancją)
+            let margin: CGFloat = 24
+            let transformedCandidates: [(orig: AVMetadataMachineReadableCodeObject, transformed: AVMetadataMachineReadableCodeObject, dist: CGFloat)] = objects.compactMap { obj in
                 guard let m = obj as? AVMetadataMachineReadableCodeObject,
                       let t = previewLayer.transformedMetadataObject(for: m) as? AVMetadataMachineReadableCodeObject else {
                     return nil
                 }
-                if t.bounds.contains(center) { return (m, t) }
+                let expanded = t.bounds.insetBy(dx: -margin, dy: -margin)
+                if expanded.contains(center) {
+                    let d = hypot(t.bounds.midX - center.x, t.bounds.midY - center.y)
+                    return (m, t, d)
+                }
                 return nil
             }
 
@@ -165,11 +181,7 @@ func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects
             }
 
             // Wybierz najbliższego środka (gdyby nakładały się ramki)
-            let chosen = transformedCandidates.min { a, b in
-                let da = hypot(a.transformed.bounds.midX - center.x, a.transformed.bounds.midY - center.y)
-                let db = hypot(b.transformed.bounds.midX - center.x, b.transformed.bounds.midY - center.y)
-                return da < db
-            }!
+            let chosen = transformedCandidates.min { a, b in a.dist < b.dist }!
 
             let value = chosen.orig.stringValue
             self.updateHighlight(transformed: chosen.transformed)
@@ -245,12 +257,11 @@ func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects
     }
 
     private func currentReticleRect() -> CGRect {
-        // Szerszy centralny ROI dla lepszego wykrywania, przy zachowaniu celu na środku
+        // Szeroki i niski pas w centrum – dobry dla kodów 1D w portrecie
         let w = view.bounds.width
         let h = view.bounds.height
-        let base = min(w, h)
-        let rw = base * 0.6
-        let rh = base * 0.4
+        let rw = w * 0.85
+        let rh = h * 0.22
         let rect = CGRect(x: (w - rw) / 2, y: (h - rh) / 2, width: rw, height: rh)
         return rect
     }

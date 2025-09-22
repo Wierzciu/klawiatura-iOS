@@ -99,24 +99,41 @@ struct ListsView: View {
     @State private var lists: [NSManagedObject] = []
 
     var body: some View {
-        List {
-            ForEach(Array(lists.enumerated()), id: \.offset) { _, obj in
-                let name = (try? obj.value(forKey: "name")) as? String ?? "(bez nazwy)"
-                NavigationLink(destination: ScanListView(listId: name)) {
-                    HStack {
+        ScrollView {
+            let columns = [GridItem(.adaptive(minimum: 140), spacing: 16)]
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(Array(lists.enumerated()), id: \.offset) { _, obj in
+                    let name = (try? obj.value(forKey: "name")) as? String ?? "(bez nazwy)"
+                    NavigationLink(destination: ScanListView(listId: name)) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .fill(Color.gray.opacity(0.15))
-                                .frame(width: 64, height: 64)
-                            Text(String(name.prefix(2)).uppercased())
+                                .aspectRatio(1, contentMode: .fit)
+                            Text(name)
                                 .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .padding()
                         }
-                        Text(name)
-                            .font(.headline)
+                    }
+                }
+
+                Button(action: { showCreate = true }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(style: StrokeStyle(lineWidth: 2, dash: [6]))
+                            .foregroundStyle(Color.accentColor)
+                            .aspectRatio(1, contentMode: .fit)
+                        VStack(spacing: 8) {
+                            Image(systemName: "plus")
+                                .font(.title)
+                            Text("Nowa lista")
+                                .font(.subheadline)
+                        }
+                        .foregroundStyle(Color.accentColor)
                     }
                 }
             }
-            .onDelete(perform: delete)
+            .padding(16)
         }
         .navigationTitle("Twoje listy")
         .toolbar {
