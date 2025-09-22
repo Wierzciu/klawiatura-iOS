@@ -1,5 +1,5 @@
 import SwiftUI
-
+import CoreData
 import UIKit
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
@@ -18,6 +18,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 struct BarcodeKeyboardApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var presentedMode: ScanMode? = nil
+    private let persistenceController = PersistenceController.shared
+    private let scanService = ScanPersistenceService.shared
+    private let defaultListId = ScanPersistenceService.defaultListId
 
     @MainActor private func handle(_ url: URL) {
         print("🔗 BarcodeKeyboardApp: Handling URL: \(url)")
@@ -32,13 +35,20 @@ struct BarcodeKeyboardApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .onOpenURL(perform: handle)
                 .onAppear {
                     appDelegate.onDeepLink = { url in handle(url) }
                 }
                 .sheet(item: $presentedMode) { mode in
                     ScannerScreen(mode: mode) { items in
+                        let targetList = SharedStorage.getLastListId() ?? defaultListId
+                        scanService.save(scannedItems: items, listId: targetList)
+                        SharedStorage.addKnownListId(targetList)
                         SharedStorage.savePending(scans: items)
+                        // Fallback bridge for keyboards: named pasteboard
+                        let text = TextInsertionFormatter.joinedText(for: items)
+                        PasteboardBridge.write(text)
                         SharedStorage.set(lastMode: mode)
                         presentedMode = nil
                     }

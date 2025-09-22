@@ -5,6 +5,9 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
     private let session = AVCaptureSession()
     private let onCandidateChange: (ScannedItem?) -> Void
     private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var metadataOutput: AVCaptureMetadataOutput?
+    private var lastProcessTs: CFTimeInterval = 0
+    private let processInterval: CFTimeInterval = 0.08 // seconds
     private let highlightLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
         layer.fillColor = UIColor.systemGreen.withAlphaComponent(0.25).cgColor
@@ -40,9 +43,10 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         view.layer.addSublayer(highlightLayer)
     }
 
-    private func setupCamera() {
+private func setupCamera() {
         session.beginConfiguration()
-        session.sessionPreset = .hd1280x720
+        // Lower resolution preset for better latency
+        session.sessionPreset = .vga640x480
         guard let device = selectBestBackCamera(),
               let input = try? AVCaptureDeviceInput(device: device) else {
             session.commitConfiguration()
@@ -51,10 +55,12 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         if session.canAddInput(input) { session.addInput(input) }
         let output = AVCaptureMetadataOutput()
         if session.canAddOutput(output) { session.addOutput(output) }
+        self.metadataOutput = output
         // Using a private serial queue to avoid blocking main and reduce UI jank
         let queue = DispatchQueue(label: "barcode.metadata.queue")
         output.setMetadataObjectsDelegate(self, queue: queue)
-        output.metadataObjectTypes = [.ean8, .ean13, .qr, .code128, .code39, .code93, .pdf417, .upce, .itf14, .interleaved2of5, .aztec, .dataMatrix]
+        // Limit types for performance; expand if you need more symbologies
+        output.metadataObjectTypes = [.ean8, .ean13, .code128]
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         view.layer.insertSublayer(preview, at: 0)
@@ -84,7 +90,14 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         view.addGestureRecognizer(tap)
         session.commitConfiguration()
-        session.startRunning()
+        // Configure rect of interest (center area) on the main thread after layout
+        DispatchQueue.main.async { [weak self] in
+            self?.updateRectOfInterest()
+        }
+        // Start session off the main thread to avoid UI stalls (per Thread Performance Checker)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.session.startRunning()
+        }
     }
 
     // Prefer multi-camera devices that can switch optics automatically
@@ -107,43 +120,61 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         return AVCaptureDevice.default(for: .video)
     }
 
-    override func viewDidLayoutSubviews() {
+override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         previewLayer?.frame = view.bounds
         highlightLayer.frame = view.bounds
+        // Update scan area when layout changes (orientation/size)
+        updateRectOfInterest()
     }
 
-    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        // Wybierz obiekt, którego bounds zawiera punkt celowania (środek ekranu)
-        guard let previewLayer else {
-            DispatchQueue.main.async { [weak self] in
-                self?.updateHighlight(transformed: nil)
-                self?.onCandidateChange(nil)
-            }
-            return
-        }
-        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
-        let candidates = metadataObjects.compactMap { $0 as? AVMetadataMachineReadableCodeObject }
-        let chosenOriginal: AVMetadataMachineReadableCodeObject? = candidates.first { obj in
-            if let t = previewLayer.transformedMetadataObject(for: obj) as? AVMetadataMachineReadableCodeObject {
-                return t.bounds.insetBy(dx: -12, dy: -12).contains(center)
-            }
-            return false
-        }
-        guard let original = chosenOriginal else {
-            DispatchQueue.main.async { [weak self] in
-                self?.updateHighlight(transformed: nil)
-                self?.onCandidateChange(nil)
-            }
-            return
-        }
-        let value = original.stringValue
-        let transformed = previewLayer.transformedMetadataObject(for: original) as? AVMetadataMachineReadableCodeObject
+func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
+        // Przenieś całą interakcję z UI/layers na główny wątek, aby uniknąć MTC
+        let objects = metadataObjects
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.updateHighlight(transformed: transformed)
+            guard let self = self, let previewLayer = self.previewLayer else {
+                self?.updateHighlight(transformed: nil)
+                self?.onCandidateChange(nil)
+                return
+            }
+
+            // Throttle processing to reduce UI churn
+            let now = CACurrentMediaTime()
+            if now - self.lastProcessTs < self.processInterval {
+                return
+            }
+            self.lastProcessTs = now
+
+            // Środek ekranu = pozycja kropki
+            let center = CGPoint(x: self.view.bounds.midX, y: self.view.bounds.midY)
+
+            // Kandydaci po transformacji do warstwy; wybierz tylko te, których ramka zawiera środek
+            let transformedCandidates: [(orig: AVMetadataMachineReadableCodeObject, transformed: AVMetadataMachineReadableCodeObject)] = objects.compactMap { obj in
+                guard let m = obj as? AVMetadataMachineReadableCodeObject,
+                      let t = previewLayer.transformedMetadataObject(for: m) as? AVMetadataMachineReadableCodeObject else {
+                    return nil
+                }
+                if t.bounds.contains(center) { return (m, t) }
+                return nil
+            }
+
+            guard !transformedCandidates.isEmpty else {
+                self.updateHighlight(transformed: nil)
+                self.onCandidateChange(nil)
+                return
+            }
+
+            // Wybierz najbliższego środka (gdyby nakładały się ramki)
+            let chosen = transformedCandidates.min { a, b in
+                let da = hypot(a.transformed.bounds.midX - center.x, a.transformed.bounds.midY - center.y)
+                let db = hypot(b.transformed.bounds.midX - center.x, b.transformed.bounds.midY - center.y)
+                return da < db
+            }!
+
+            let value = chosen.orig.stringValue
+            self.updateHighlight(transformed: chosen.transformed)
             if let v = value, !v.isEmpty {
-                self.onCandidateChange(ScannedItem(value: v, symbology: original.type.rawValue))
+                self.onCandidateChange(ScannedItem(value: v, symbology: chosen.orig.type.rawValue))
             } else {
                 self.onCandidateChange(nil)
             }
@@ -195,6 +226,33 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
             if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
             device.unlockForConfiguration()
         } catch {}
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // Stop session off the main thread to avoid UI stalls
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.session.stopRunning()
+        }
+    }
+
+    private func updateRectOfInterest() {
+        guard let previewLayer, let output = metadataOutput else { return }
+        // Dopasuj ROI do prostokąta celownika
+        let layerRect = currentReticleRect()
+        let roi = previewLayer.metadataOutputRectConverted(fromLayerRect: layerRect)
+        output.rectOfInterest = roi
+    }
+
+    private func currentReticleRect() -> CGRect {
+        // Szerszy centralny ROI dla lepszego wykrywania, przy zachowaniu celu na środku
+        let w = view.bounds.width
+        let h = view.bounds.height
+        let base = min(w, h)
+        let rw = base * 0.6
+        let rh = base * 0.4
+        let rect = CGRect(x: (w - rw) / 2, y: (h - rh) / 2, width: rw, height: rh)
+        return rect
     }
 }
 

@@ -3,7 +3,7 @@ options:
   minimumXcodeGenVersion: 2.38.0
 settings:
   base:
-    SWIFT_VERSION: 5.0
+    SWIFT_VERSION: 5.9
     IPHONEOS_DEPLOYMENT_TARGET: 18.0
 
 targets:
@@ -16,6 +16,9 @@ targets:
         excludes:
           - build
       - path: Shared
+      - path: Models
+      - path: Persistence
+      - path: Features
     info:
       path: App/Info.plist
       properties:
@@ -23,18 +26,25 @@ targets:
           - CFBundleURLName: BarcodeKeyboard URL Scheme
             CFBundleURLSchemes:
               - barcodekb
-        NSCameraUsageDescription: Potrzebujemy dostępu do aparatu, aby skanować kody kreskowe.
+        NSCameraUsageDescription: Aplikacja potrzebuje dostępu do kamery, aby skanować kody QR i kreskowe.
     entitlements:
       path: App/BarcodeKeyboard.entitlements
+    coreDataModels:
+      - path: Persistence/ScanDB.xcdatamodeld
+    
     settings:
       base:
         PRODUCT_NAME: BarcodeKeyboard
         PRODUCT_BUNDLE_IDENTIFIER: pl.twojefirma.klawiatura
-        CODE_SIGN_ENTITLEMENTS: App/BarcodeKeyboard.entitlements
         DEVELOPMENT_TEAM: 55YFRJ3MBY
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: App/BarcodeKeyboard.debug.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: App/BarcodeKeyboard.entitlements
     dependencies:
       - target: KeyboardExtension
         embed: true
@@ -46,6 +56,7 @@ targets:
     sources:
       - path: KeyboardExtension
       - path: Shared
+      - path: Models
     info:
       path: KeyboardExtension/Info.plist
       properties:
@@ -64,19 +75,35 @@ targets:
       base:
         PRODUCT_NAME: KeyboardExtension
         PRODUCT_BUNDLE_IDENTIFIER: pl.twojefirma.klawiatura.KeyboardExtension
-        CODE_SIGN_ENTITLEMENTS: KeyboardExtension/KeyboardExtension.entitlements
         DEVELOPMENT_TEAM: 55YFRJ3MBY
         CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: KeyboardExtension/KeyboardExtension.debug.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: KeyboardExtension/KeyboardExtension.entitlements
+  ScanListTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/ScanListTests
+    dependencies:
+      - target: BarcodeKeyboard
+
 schemes:
   BarcodeKeyboard:
     build:
       targets:
         BarcodeKeyboard: [run, test, profile, analyze, archive]
         KeyboardExtension: [run, test, profile, analyze, archive]
+        ScanListTests: [test]
     run:
       config: Debug
     test:
       config: Debug
+      targets:
+        - ScanListTests
     archive:
       config: Release
   KeyboardExtension:

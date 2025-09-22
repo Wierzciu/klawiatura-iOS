@@ -35,6 +35,20 @@
                ReferencedContainer = "container:BarcodeKeyboard.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9C46DA3B9E75C5B5061F2CF2"
+               BuildableName = "ScanListTests.xctest"
+               BlueprintName = "ScanListTests"
+               ReferencedContainer = "container:BarcodeKeyboard.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -53,6 +67,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9C46DA3B9E75C5B5061F2CF2"
+               BuildableName = "ScanListTests.xctest"
+               BlueprintName = "ScanListTests"
+               ReferencedContainer = "container:BarcodeKeyboard.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

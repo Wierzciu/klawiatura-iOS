@@ -14,10 +14,12 @@ struct ScannerScreen: View {
         ZStack {
             scannerView
                 .ignoresSafeArea()
+            // Celownik jako kropka (wizualny punkt)
             AimDot()
                 .frame(width: 10, height: 10)
-                .foregroundStyle(.white)
-                .opacity(0.9)
+                .foregroundStyle(lockedCandidate != nil ? Color.green : Color.white)
+                .opacity(0.95)
+                .allowsHitTesting(false)
         }
         .safeAreaInset(edge: .top) { topBar }
         .safeAreaInset(edge: .bottom) { bottomBar }
@@ -144,7 +146,7 @@ struct ScannerScreen: View {
 
     private func handleCandidate(_ candidate: ScannedItem?) {
         if let item = candidate, !item.value.isEmpty {
-            // Debounce to avoid excessive state churn
+            // Tylko "lockuj" gdy celownik faktycznie ma kandydata (zapewnia AVScannerWrapper)
             if lastCandidateValue != item.value {
                 lastCandidateValue = item.value
                 lockedCandidate = item
@@ -178,3 +180,4 @@ struct AimDot: View {
             .shadow(color: .black.opacity(0.6), radius: 1)
     }
 }
+

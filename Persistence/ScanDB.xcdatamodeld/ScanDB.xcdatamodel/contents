@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ScanItem" representedClassName="ScanItem" syncable="YES" codeGenerationType="none">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="listId" optional="NO" attributeType="String" indexed="YES" syncable="YES"/>
+        <attribute name="codeRaw" optional="NO" attributeType="String" syncable="YES"/>
+        <attribute name="codeType" optional="NO" attributeType="String" syncable="YES"/>
+        <attribute name="label" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" indexed="YES" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="meta" optional="YES" attributeType="Binary" syncable="YES"/>
+        <fetchIndex name="listId_index">
+            <fetchIndexElement property="listId" order="ascending"/>
+        </fetchIndex>
+        <fetchIndex name="createdAt_desc_index">
+            <fetchIndexElement property="createdAt" order="descending"/>
+        </fetchIndex>
+    </entity>
+    <entity name="ScanList" representedClassName="ScanList" syncable="YES" codeGenerationType="none">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="NO" attributeType="String" indexed="YES" syncable="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="ScanItem" positionX="160" positionY="160" width="128" height="188"/>
+        <element name="ScanList" positionX="420" positionY="160" width="128" height="88"/>
+    </elements>
+</model>

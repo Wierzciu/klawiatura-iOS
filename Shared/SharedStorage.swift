@@ -19,20 +19,31 @@ public struct ScannedItem: Codable, Equatable {
 }
 
 public enum SharedStorage {
-    // ZMIEŃ NA SWOJĄ GRUPĘ APP GROUPS!
-    public static let appGroupIdentifier: String = "group.pl.twojefirma.klawiatura"
+    // Jednolita App Group współdzielona przez appkę i rozszerzenie
+    public static let appGroupIdentifier: String = "group.com.wierzciu.klawiatura"
 
     private static var defaults: UserDefaults? {
-        UserDefaults(suiteName: appGroupIdentifier)
+        let d = UserDefaults(suiteName: appGroupIdentifier)
+        #if DEBUG
+        if d == nil { print("❌ SharedStorage: App Group not available: \(appGroupIdentifier)") }
+        #endif
+        return d
     }
 
     private enum Keys {
         static let pendingScans = "pendingScans"
         static let lastMode = "lastScanMode"
+        static let lastListId = "lastListId"
+        static let knownListIds = "knownListIds"
     }
 
     public static func savePending(scans: [ScannedItem]) {
-        guard let defaults else { return }
+        guard let defaults else {
+            #if DEBUG
+            print("❌ SharedStorage.savePending: defaults=nil")
+            #endif
+            return
+        }
         do {
             let data = try JSONEncoder().encode(scans)
             defaults.set(data, forKey: Keys.pendingScans)
@@ -79,5 +90,31 @@ public enum SharedStorage {
     public static func getLastMode() -> ScanMode? {
         guard let raw = defaults?.string(forKey: Keys.lastMode) else { return nil }
         return ScanMode(rawValue: raw)
+    }
+
+    public static func set(lastListId: String) {
+        defaults?.set(lastListId, forKey: Keys.lastListId)
+    }
+
+    public static func getLastListId() -> String? {
+        defaults?.string(forKey: Keys.lastListId)
+    }
+
+    public static func addKnownListId(_ id: String) {
+        guard !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        var set = Set(getKnownListIds())
+        set.insert(id)
+        defaults?.set(Array(set), forKey: Keys.knownListIds)
+    }
+
+    public static func getKnownListIds() -> [String] {
+        guard let arr = defaults?.array(forKey: Keys.knownListIds) as? [String] else { return [] }
+        return Array(Set(arr)).sorted()
+    }
+
+    public static func removeKnownListId(_ id: String) {
+        var set = Set(getKnownListIds())
+        set.remove(id)
+        defaults?.set(Array(set), forKey: Keys.knownListIds)
     }
 }

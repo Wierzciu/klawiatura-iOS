@@ -45,11 +45,52 @@ final class KeyboardViewController: UIInputViewController {
         insertPendingIfAny()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // In some return flows, viewDidAppear may not fire immediately.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            self?.insertPendingIfAny()
+        }
+    }
+
     func insertPendingIfAny() {
+        attemptInsertPending(retries: 3)
+    }
+
+    private func attemptInsertPending(retries: Int) {
+        #if DEBUG
+        print("⌨️ attemptInsertPending(retries: \(retries))")
+        #endif
+        var inserted = false
         let items = SharedStorage.fetchAndClear()
-        guard !items.isEmpty else { return }
-        let text = TextInsertionFormatter.joinedText(for: items)
-        textDocumentProxy.insertText(text)
+        if !items.isEmpty {
+            let text = TextInsertionFormatter.joinedText(for: items)
+            textDocumentProxy.insertText(text)
+            inserted = true
+            #if DEBUG
+            print("✅ Inserted from App Group: \(text.prefix(64))...")
+            #endif
+        }
+        if !inserted, hasFullAccess, let pb = readBridgePasteboardAndClear() {
+            textDocumentProxy.insertText(pb)
+            inserted = true
+            #if DEBUG
+            print("✅ Inserted from named pasteboard")
+            #endif
+        }
+        if !inserted && retries > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.attemptInsertPending(retries: retries - 1)
+            }
+        }
+    }
+
+    private func readBridgePasteboardAndClear() -> String? {
+        let name = UIPasteboard.Name("barcodekb.scans")
+        guard let pb = UIPasteboard(name: name, create: false) else { return nil }
+        let value = pb.string
+        if value != nil { pb.string = nil }
+        return (value?.isEmpty == false) ? value : nil
     }
 
     func openScanner(mode: ScanMode) {
@@ -59,7 +100,9 @@ final class KeyboardViewController: UIInputViewController {
         // Check if we have full access
         guard hasFullAccess else {
             print("❌ KeyboardViewController: No full access - cannot open URLs")
-            showFullAccessAlert()
+            // Don't present alerts from keyboard extension; just log and haptic
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.warning)
             return
         }
         
@@ -81,35 +124,15 @@ final class KeyboardViewController: UIInputViewController {
             generator.impactOccurred()
             
             print("📱 KeyboardViewController: Calling extensionContext.open with URL: \(url.absoluteString)")
-            extensionContext.open(url) { [weak self] success in
+            extensionContext.open(url) { success in
                 print("✅ KeyboardViewController: extensionContext.open completed with success: \(success)")
                 if !success {
-                    print("⚠️ KeyboardViewController: Failed to open URL. Ensure Full Access is enabled and the host app is installed with the 'barcodekb' URL scheme.")
-                    self?.showOpenFailedAlert()
+                    print("⚠️ KeyboardViewController: Failed to open URL. Ensure host app is installed with the 'barcodekb' URL scheme.")
                 }
             }
         }
     }
     
-    private func showFullAccessAlert() {
-        let alert = UIAlertController(
-            title: "Wymagany pełny dostęp",
-            message: "Aby używać funkcji skanowania, włącz 'Pełny dostęp' dla tej klawiatury w Ustawieniach > Ogólne > Klawiatura > Klawiatury.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-    
-    private func showOpenFailedAlert() {
-        let alert = UIAlertController(
-            title: "Nie udało się otworzyć aplikacji",
-            message: "Sprawdź, czy aplikacja jest zainstalowana i czy ma zdefiniowany schemat URL 'barcodekb'. Następnie spróbuj ponownie.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
 }
 
 struct KeyboardRootView: View {
@@ -141,26 +164,18 @@ struct KeyboardRootView: View {
             }
             // Scan bar (compact)
             HStack(spacing: 12) {
-            
-if let url = URLRoutes.scanURL(mode: SharedStorage.getLastMode() ?? .single) {
-    Link(destination: url) {
-        Label("Skanuj", systemImage: "barcode.viewfinder")
-    }
-    .simultaneousGesture(TapGesture().onEnded {
-        let mode = SharedStorage.getLastMode() ?? .single
-        SharedStorage.set(lastMode: mode)
-    })
-    .buttonStyle(.borderedProminent)
-    .controlSize(.small)
-    .font(.callout)
-} else {
-    Button(action: { /* fallback */ }) {
-        Label("Skanuj", systemImage: "barcode.viewfinder")
-    }
-    .buttonStyle(.borderedProminent)
-    .controlSize(.small)
-    .font(.callout)
-}
+                if let url = URLRoutes.scanURL(mode: SharedStorage.getLastMode() ?? .single) {
+                    Link(destination: url) {
+                        Label("Skanuj", systemImage: "barcode.viewfinder")
+                    }
+                    .simultaneousGesture(TapGesture().onEnded {
+                        let mode = SharedStorage.getLastMode() ?? .single
+                        SharedStorage.set(lastMode: mode)
+                    })
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .font(.callout)
+                }
 
 
             Spacer()
