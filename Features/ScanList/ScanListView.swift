@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import CoreData
 #if canImport(OSLog)
 import OSLog
 #endif
@@ -80,6 +81,25 @@ struct ScanListView: View {
 
                 Button("Eksport CSV") { viewModel.exportCSV() }
                     .buttonStyle(.bordered)
+            }
+
+            // Pola kontekstowe listy
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Atrybuty listy")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack {
+                    TextField("Nazwa pozycji", text: $viewModel.listItemName)
+                        .textFieldStyle(.roundedBorder)
+                        .disableAutocorrection(true)
+                        .autocapitalization(.none)
+                    TextField("Nazwa dostawcy", text: $viewModel.supplierName)
+                        .textFieldStyle(.roundedBorder)
+                        .disableAutocorrection(true)
+                        .autocapitalization(.none)
+                    Button("Zapisz") { viewModel.saveListMeta() }
+                        .buttonStyle(.bordered)
+                }
             }
 
             if viewModel.showManualFallbackSuggestion {
@@ -169,6 +189,8 @@ final class ScanListViewModel: ObservableObject {
     @Published var editingItem: ScanItemDTO? = nil
     @Published var cameraPermissionDenied: Bool = false
     @Published var showManualFallbackSuggestion: Bool = false
+    @Published var listItemName: String = ""
+    @Published var supplierName: String = ""
 
     let listId: String
 
@@ -184,6 +206,7 @@ final class ScanListViewModel: ObservableObject {
         self.listId = listId
         self.service = service
         self.cameraPermissionProvider = cameraPermissionProvider
+        loadListMeta()
     }
 
     func loadItems() {
@@ -191,6 +214,29 @@ final class ScanListViewModel: ObservableObject {
             items = try service.getItems(listId: listId)
         } catch {
             handleError(error)
+        }
+    }
+
+    func loadListMeta() {
+        let context = PersistenceController.shared.container.viewContext
+        let req = NSFetchRequest<NSManagedObject>(entityName: "ScanList")
+        req.predicate = NSPredicate(format: "name == %@", listId)
+        req.fetchLimit = 1
+        if let list = try? context.fetch(req).first {
+            self.listItemName = (list.value(forKey: "itemName") as? String) ?? ""
+            self.supplierName = (list.value(forKey: "supplierName") as? String) ?? ""
+        }
+    }
+
+    func saveListMeta() {
+        let context = PersistenceController.shared.container.viewContext
+        let req = NSFetchRequest<NSManagedObject>(entityName: "ScanList")
+        req.predicate = NSPredicate(format: "name == %@", listId)
+        req.fetchLimit = 1
+        if let list = try? context.fetch(req).first {
+            list.setValue(listItemName.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "itemName")
+            list.setValue(supplierName.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "supplierName")
+            PersistenceController.shared.save(context: context)
         }
     }
 

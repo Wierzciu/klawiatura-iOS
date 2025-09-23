@@ -19,6 +19,8 @@
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="name" optional="NO" attributeType="String" indexed="YES" syncable="YES"/>
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="itemName" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="supplierName" optional="YES" attributeType="String" syncable="YES"/>
     </entity>
     <elements>
         <element name="ScanItem" positionX="160" positionY="160" width="128" height="188"/>

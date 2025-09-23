@@ -20,6 +20,9 @@ final class ScanPersistenceService {
         var savedItems: [ScanItem] = []
         let context = context ?? persistenceController.container.viewContext
 
+        // Zbierz meta z encji ScanList (itemName, supplierName)
+        let listMeta = self.metaForList(named: listId, context: context)
+
         for item in scannedItems {
             let stored = upsert(
                 listId: listId,
@@ -27,7 +30,7 @@ final class ScanPersistenceService {
                 codeType: item.symbology ?? "unknown",
                 label: nil,
                 createdAt: item.date,
-                meta: nil,
+                meta: listMeta,
                 context: context
             )
 
@@ -35,6 +38,20 @@ final class ScanPersistenceService {
         }
 
         return savedItems
+    }
+
+    private func metaForList(named name: String, context: NSManagedObjectContext) -> Data? {
+        let req = NSFetchRequest<NSManagedObject>(entityName: "ScanList")
+        req.predicate = NSPredicate(format: "name == %@", name)
+        req.fetchLimit = 1
+        guard let list = try? context.fetch(req).first else { return nil }
+        let itemName = list.value(forKey: "itemName") as? String
+        let supplierName = list.value(forKey: "supplierName") as? String
+        var dict: [String: String] = [:]
+        if let itemName, !itemName.isEmpty { dict["itemName"] = itemName }
+        if let supplierName, !supplierName.isEmpty { dict["supplierName"] = supplierName }
+        guard !dict.isEmpty else { return nil }
+        return try? JSONSerialization.data(withJSONObject: dict, options: [])
     }
 
     @discardableResult

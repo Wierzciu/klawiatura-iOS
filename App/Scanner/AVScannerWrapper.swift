@@ -1,13 +1,21 @@
 import SwiftUI
 import AVFoundation
+import QuartzCore
 
 final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     private let session = AVCaptureSession()
     private let onCandidateChange: (ScannedItem?) -> Void
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var metadataOutput: AVCaptureMetadataOutput?
-    private var lastProcessTs: CFTimeInterval = 0
-    private let processInterval: CFTimeInterval = 0.05 // seconds
+
+    // Realtime UI driver – we coalesce metadata callbacks and render at display refresh
+    private var displayLink: CADisplayLink?
+    private let latestObjectsQueue = DispatchQueue(label: "barcode.latest.queue", qos: .userInitiated)
+    private var latestObjects: [AVMetadataObject] = []
+
+    // Lightweight state for candidate emission
+    private var lastEmittedValue: String?
+
     private let highlightLayer: CAShapeLayer = {
         let layer = CAShapeLayer()
         layer.fillColor = UIColor.systemGreen.withAlphaComponent(0.25).cgColor
@@ -41,6 +49,14 @@ final class AVScannerViewController: UIViewController, AVCaptureMetadataOutputOb
         // Dimming + highlight layers sit above preview
         view.layer.addSublayer(dimmingLayer)
         view.layer.addSublayer(highlightLayer)
+
+        // Drive UI at up to 60 FPS to ensure fast highlight updates on modern devices
+        let dl = CADisplayLink(target: self, selector: #selector(tickDisplayLink))
+        if #available(iOS 15.0, *) {
+            dl.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        }
+        dl.add(to: .main, forMode: .common)
+        self.displayLink = dl
     }
 
 private func setupCamera() {
@@ -63,10 +79,16 @@ private func setupCamera() {
         if session.canAddOutput(output) { session.addOutput(output) }
         self.metadataOutput = output
         // Using a private serial queue to avoid blocking main and reduce UI jank
-        let queue = DispatchQueue(label: "barcode.metadata.queue")
+        let queue = DispatchQueue(label: "barcode.metadata.queue", qos: .userInitiated)
         output.setMetadataObjectsDelegate(self, queue: queue)
-        // Zakres typów zoptymalizowany pod 1D; rozszerz w razie potrzeby
-        output.metadataObjectTypes = [.ean8, .ean13, .upce, .code128, .code39, .itf14, .interleaved2of5]
+        // Rozszerzony zakres typów (filtrujemy do dostępnych na danym urządzeniu)
+        let requested: [AVMetadataObject.ObjectType] = [
+            .ean8, .ean13, .upce,
+            .code128, .code39, .code93, .itf14, .interleaved2of5,
+            .qr, .pdf417, .aztec, .dataMatrix
+        ]
+        let available = Set(output.availableMetadataObjectTypes)
+        output.metadataObjectTypes = requested.filter { available.contains($0) }
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
         view.layer.insertSublayer(preview, at: 0)
@@ -140,56 +162,55 @@ override func viewDidLayoutSubviews() {
     }
 
 func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        // Przenieś całą interakcję z UI/layers na główny wątek, aby uniknąć MTC
-        let objects = metadataObjects
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self, let previewLayer = self.previewLayer else {
-                self?.updateHighlight(transformed: nil)
-                self?.onCandidateChange(nil)
-                return
-            }
+        // Store latest objects; UI will pull and render at display tick to prevent main-queue backlog
+        latestObjectsQueue.async { [weak self] in
+            self?.latestObjects = metadataObjects
+        }
+    }
 
-            // Throttle processing to reduce UI churn
-            let now = CACurrentMediaTime()
-            if now - self.lastProcessTs < self.processInterval {
-                return
-            }
-            self.lastProcessTs = now
+    @objc private func tickDisplayLink() {
+        guard let previewLayer else {
+            updateHighlight(transformed: nil)
+            onCandidateChange(nil)
+            return
+        }
+        // Snapshot latest metadata on main in a thread-safe way
+        let snapshot: [AVMetadataObject] = latestObjectsQueue.sync { latestObjects }
 
-            // Środek ekranu = pozycja kropki
-            let center = CGPoint(x: self.view.bounds.midX, y: self.view.bounds.midY)
+        // Środek ekranu = pozycja kropki
+        let center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        let margin: CGFloat = 24
 
-            // Kandydaci po transformacji; wybierz tych, których ramka zawiera środek (z tolerancją)
-            let margin: CGFloat = 24
-            let transformedCandidates: [(orig: AVMetadataMachineReadableCodeObject, transformed: AVMetadataMachineReadableCodeObject, dist: CGFloat)] = objects.compactMap { obj in
-                guard let m = obj as? AVMetadataMachineReadableCodeObject,
-                      let t = previewLayer.transformedMetadataObject(for: m) as? AVMetadataMachineReadableCodeObject else {
-                    return nil
-                }
-                let expanded = t.bounds.insetBy(dx: -margin, dy: -margin)
-                if expanded.contains(center) {
-                    let d = hypot(t.bounds.midX - center.x, t.bounds.midY - center.y)
-                    return (m, t, d)
-                }
+        // Transform and pick candidate closest to center
+        let transformedCandidates: [(orig: AVMetadataMachineReadableCodeObject, transformed: AVMetadataMachineReadableCodeObject, dist: CGFloat)] = snapshot.compactMap { obj in
+            guard let m = obj as? AVMetadataMachineReadableCodeObject,
+                  let t = previewLayer.transformedMetadataObject(for: m) as? AVMetadataMachineReadableCodeObject else {
                 return nil
             }
-
-            guard !transformedCandidates.isEmpty else {
-                self.updateHighlight(transformed: nil)
-                self.onCandidateChange(nil)
-                return
+            let expanded = t.bounds.insetBy(dx: -margin, dy: -margin)
+            if expanded.contains(center) {
+                let d = hypot(t.bounds.midX - center.x, t.bounds.midY - center.y)
+                return (m, t, d)
             }
+            return nil
+        }
 
-            // Wybierz najbliższego środka (gdyby nakładały się ramki)
-            let chosen = transformedCandidates.min { a, b in a.dist < b.dist }!
-
-            let value = chosen.orig.stringValue
-            self.updateHighlight(transformed: chosen.transformed)
-            if let v = value, !v.isEmpty {
-                self.onCandidateChange(ScannedItem(value: v, symbology: chosen.orig.type.rawValue))
-            } else {
-                self.onCandidateChange(nil)
+        guard !transformedCandidates.isEmpty else {
+            updateHighlight(transformed: nil)
+            onCandidateChange(nil)
+            lastEmittedValue = nil
+            return
+        }
+        let chosen = transformedCandidates.min { a, b in a.dist < b.dist }!
+        updateHighlight(transformed: chosen.transformed)
+        if let v = chosen.orig.stringValue, !v.isEmpty {
+            if v != lastEmittedValue {
+                lastEmittedValue = v
+                onCandidateChange(ScannedItem(value: v, symbology: chosen.orig.type.rawValue))
             }
+        } else {
+            onCandidateChange(nil)
+            lastEmittedValue = nil
         }
     }
 
@@ -246,6 +267,8 @@ func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.session.stopRunning()
         }
+        displayLink?.invalidate()
+        displayLink = nil
     }
 
     private func updateRectOfInterest() {

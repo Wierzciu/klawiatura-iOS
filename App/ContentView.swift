@@ -97,6 +97,10 @@ struct ListsView: View {
     @State private var showCreate: Bool = false
     @State private var newName: String = ""
     @State private var lists: [NSManagedObject] = []
+    @State private var showDeleteConfirm: Bool = false
+    @State private var pendingDelete: NSManagedObject? = nil
+    @State private var pendingDeleteName: String = ""
+    @State private var confirmDeleteInput: String = ""
 
     var body: some View {
         ScrollView {
@@ -113,6 +117,16 @@ struct ListsView: View {
                                 .font(.headline)
                                 .multilineTextAlignment(.center)
                                 .padding()
+                        }
+                    }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            pendingDelete = obj
+                            pendingDeleteName = name
+                            confirmDeleteInput = ""
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Usuń listę", systemImage: "trash")
                         }
                     }
                 }
@@ -136,6 +150,32 @@ struct ListsView: View {
             .padding(16)
         }
         .navigationTitle("Twoje listy")
+        .sheet(isPresented: $showDeleteConfirm) {
+            NavigationStack {
+                Form {
+                    Section("Potwierdź usunięcie") {
+                        Text("Aby usunąć listę wpisz jej nazwę dokładnie:")
+                        Text("\(pendingDeleteName)")
+                            .font(.headline)
+                        TextField("Wpisz nazwę listy", text: $confirmDeleteInput)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                    }
+                    Section {
+                        Button("Usuń listę", role: .destructive) {
+                            deletePendingConfirmed()
+                        }
+                        .disabled(confirmDeleteInput.trimmingCharacters(in: .whitespacesAndNewlines) != pendingDeleteName)
+                    }
+                }
+                .navigationTitle("Usuń listę")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Anuluj") { showDeleteConfirm = false }
+                    }
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { showCreate = true }) { Image(systemName: "plus") }
@@ -194,6 +234,18 @@ struct ListsView: View {
             context.delete(item)
         }
         PersistenceController.shared.save(context: context)
+        reload()
+    }
+
+    private func deletePendingConfirmed() {
+        guard let obj = pendingDelete else { return }
+        context.delete(obj)
+        PersistenceController.shared.save(context: context)
+        if SharedStorage.getLastListId() == pendingDeleteName {
+            SharedStorage.set(lastListId: "")
+        }
+        showDeleteConfirm = false
+        pendingDelete = nil
         reload()
     }
 }
